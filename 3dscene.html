@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>3dScene Rendering - final</title>
+	<meta charset="utf-8">
+</head>
+<body>
+<script src="js/Three.min.js"></script>
+<script src="js/Three.js"></script>
+
+<script src="js/AssimpJSONLoader.js"></script>
+<script src="js/OrbitControls.js"></script>
+
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+
+
+<div id="canvas" style="position: absolute; left:0px; top:0px;"></div>
+<script>
+
+var container, scene, camera, renderer, controls, stats,an=0;
+
+var mirrorCube, mirrorCubeCamera;
+var mirrorSphere, mirrorSphereCamera;
+
+
+var anim = [];
+
+init();
+animate();
+
+function init()
+{
+	
+	scene = new THREE.Scene();
+
+	//var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var SCREEN_WIDTH = window.availWidth, SCREEN_HEIGHT = window.availHeight;
+	
+	// Camera
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(0,150,400);
+	camera.lookAt(scene.position);	
+	
+	// Shadow Renderer
+	var SHADOW_MAP_WIDTH = 2048, SHADOW_MAP_HEIGHT = 1024;
+	renderer = new THREE.WebGLRenderer( {antialias:true} );
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById( 'canvas' );
+	container.appendChild( renderer.domElement );
+	
+	renderer.shadowMapEnabled = true;
+	renderer.shadowMapSoft = true;
+	renderer.shadowMapType = THREE.PCFShadowMap;
+	
+	// On window Resize
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+	
+	// Mouse Controls
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	
+	// Light Source - Spotlight
+	var light = new THREE.SpotLight(0xffffff);
+			light.castShadow = true;
+				light.position.set(500, 3000, 500);
+				light.shadowDarkness = 0.5;
+
+				light.shadowMapWidth = SHADOW_MAP_WIDTH;
+				light.shadowMapHeight = SHADOW_MAP_HEIGHT;
+				light.angle = Math.PI/2;
+				light.intensity = 1.5;
+	anim.push(light); //added light into anim array to make light move in the animation function
+	scene.add(light);
+
+
+	/*
+	var torusKnot =new THREE.Mesh(new THREE.TorusKnotGeometry(25, 8, 75, 20), new THREE.MeshNormalMaterial());
+		//var torusKnot	= new THREE.Mesh( geometry, material );
+		torusKnot.scale.multiplyScalar(2);
+		torusKnot.position.y		= 400;
+		scene.add( torusKnot );
+
+	
+
+
+		torusKnot.castShadow		= true;
+		torusKnot.receiveShadow	= true;
+	/*
+	//var cuba  = new THREE.Mesh(new THREE.BoxGeometry(500, 500, 500), new THREE.MeshNormalMaterial());
+	var cuba  = new THREE.Mesh(new THREE.BoxGeometry(500, 500, 500),  new 	THREE.MeshLambertMaterial({color:0xff44ff}));
+		//var torusKnot	= new THREE.Mesh( geometry, material );
+		//cuba.multiplyScalar(2);
+		cuba.position.y		= 400;
+		cuba.position.x		= 1000;
+		scene.add( cuba );
+
+	
+
+
+		cuba.castShadow		= true;
+		cuba.receiveShadow	= true;
+	*/
+	
+	// To create the room with 6 sides with the provided six images.
+	var materialArray = [];
+	materialArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'files/images/1.jpg' ) }));
+	materialArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'files/images/1.jpg' ) }));
+	materialArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'files/images/2.jpg' ) }));
+	materialArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'files/images/3.jpg' ) }));
+	materialArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'files/images/4.jpg' ) }));
+	materialArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'files/images/5.jpg' ) }));
+	for (var i = 0; i < 6; i++)
+	   materialArray[i].side = THREE.BackSide;
+	
+	var skyboxMaterial = new THREE.MeshFaceMaterial( materialArray );
+	var skyboxGeom = new THREE.BoxGeometry( 5000, 4000, 5000, 1, 1, 1 );
+	var skybox = new THREE.Mesh( skyboxGeom, skyboxMaterial );
+	scene.add( skybox );	
+	
+	
+	var loader = new THREE.AssimpJSONLoader();
+			
+			//Teapot
+			loader.load( 'files/tp.json', function ( assimpjson ) {
+			
+				assimpjson.scale.x = assimpjson.scale.y = assimpjson.scale.z = 40;
+				assimpjson.position.x=0;//-1600;//0;
+				assimpjson.position.y=-500;//0;
+				assimpjson.position.z=0;//1400;//-200;
+				assimpjson.rotation.x=-Math.PI*90/180;//Rotate flower vase by -90 degree
+				assimpjson.updateMatrix();
+				
+				scene.add(assimpjson);assimpjson.traverse( function ( object ) {
+		if ( object instanceof THREE.Mesh ) {
+			object.castShadow = true;
+			object.receiveShadow = true;
+			}
+			} );
+		} );
+			
+			//Flower Pot (Red)
+			loader.load( 'files/Flowerpot2.json', function ( assimpjson ) {
+			
+				assimpjson.scale.x = assimpjson.scale.y = assimpjson.scale.z = 2000;
+				assimpjson.position.x=-1000;
+				assimpjson.position.y=-1900;
+				assimpjson.position.z=1000;
+				assimpjson.updateMatrix();
+
+				scene.add(assimpjson);assimpjson.traverse( function ( object ) {
+		if ( object instanceof THREE.Mesh ) {
+			object.castShadow = true;
+			object.receiveShadow = true;
+			}
+			} );
+		} );
+	
+	
+	// Defining the ground to render shadows
+var ground = new THREE.Mesh( new THREE.PlaneGeometry(5000, 5000, 10, 10), new THREE.MeshLambertMaterial({color:0x999999}) );
+	//ground.scale.multiplyScalar(5);
+	
+	ground.rotation.x=-Math.PI/2
+	ground.position.y= -1900;
+	scene.add( ground );
+
+	ground.castShadow = false;
+	ground.receiveShadow = true;
+
+	
+	// Large Corner Cube
+	//var cube = new THREE.Mesh(new THREE.BoxGeometry(1000, 1000, 1000), new //THREE.MeshNormalMaterial());
+	var cube = new THREE.Mesh(new THREE.BoxGeometry(1000, 1000, 1000), new 	THREE.MeshLambertMaterial({color:0xFFD700 /*0xff4488*/}) );
+      	cube.position.set(-2000,-1400,-1800);
+	cube.overdraw = true;
+      	scene.add(cube);
+	cube.castShadow = true;
+	cube.receiveShadow = true;
+	
+	
+      	//Cube on which the object is placed
+      	//var cube1 = new THREE.Mesh(new THREE.BoxGeometry(1000, 1400, 1000), new THREE.MeshNormalMaterial());
+      	var cube1 = new THREE.Mesh(new THREE.BoxGeometry(1000, 1400, 1000), new THREE.MeshLambertMaterial({color:0xFFD700}) );
+      	cube1.position.set(0,-1200,0);
+	cube1.overdraw = true;
+      	scene.add(cube1);
+      	cube1.castShadow = true;
+      	cube1.receiveShadow = true;
+      	
+      	
+	// Small Corner Cube on which 3 spherical mirrors are placed
+	//var cube2 = new THREE.Mesh(new THREE.BoxGeometry(500, 500, 1000), new //THREE.MeshNormalMaterial());
+	var cube2 = new THREE.Mesh(new THREE.BoxGeometry(500, 500, 1000), new 	THREE.MeshLambertMaterial({color:0xFFD700/*0x334488*/}) );
+      	cube2.position.set(-1250,-1650,-1800);
+	cube2.overdraw = true;
+      	scene.add(cube2);
+	cube2.castShadow = true;
+	cube2.receiveShadow = true;
+
+	// Plane mirror mounted on the side wall
+	var cubeGeom = new THREE.BoxGeometry(1000, 1000, 10, 1, 1, 1);
+	mirrorCubeCamera = new THREE.CubeCamera( 0.1, 5000, 512 );
+	scene.add( mirrorCubeCamera );
+	var mirrorCubeMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorCubeCamera.renderTarget } );
+	mirrorCube = new THREE.Mesh( cubeGeom, mirrorCubeMaterial );
+	mirrorCube.position.set(-75,0,2490);
+	mirrorCubeCamera.position = mirrorCube.position;
+	scene.add(mirrorCube);	
+
+	
+	// 4 bolts for Plane Mirror
+	var bolt  = new THREE.Mesh(new THREE.SphereGeometry(25, 32, 16), new THREE.MeshBasicMaterial( { color: 0x808080 } ));
+      	bolt.position.set(420,495,2470);
+	bolt.overdraw = false;
+      	scene.add(bolt);
+	var bolt1  = new THREE.Mesh(new THREE.SphereGeometry(25, 32, 16), new THREE.MeshBasicMaterial( { color: 0x808080 } ));
+      	bolt1.position.set(-580,495,2470);
+	bolt1.overdraw = false;
+      	scene.add(bolt1);
+	var bolt2  = new THREE.Mesh(new THREE.SphereGeometry(25, 32, 16), new THREE.MeshBasicMaterial( { color: 0x808080 } ));
+      	bolt2.position.set(420,-505,2470);
+	bolt2.overdraw = false;
+      	scene.add(bolt2);
+	var bolt3  = new THREE.Mesh(new THREE.SphereGeometry(25, 32, 16), new THREE.MeshBasicMaterial( { color: 0x808080 } ));
+      	bolt3.position.set(-580,-505,2470);
+	bolt3.overdraw = false;
+      	scene.add(bolt3);
+	
+	// Spherical Mirror placed on 
+	var sphereGeom =  new THREE.SphereGeometry( 300, 32, 16 );
+	mirrorSphereCamera = new THREE.CubeCamera( 0.1, 5000, 512 );
+	scene.add( mirrorSphereCamera );
+	var mirrorSphereMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorSphereCamera.renderTarget } );
+	mirrorSphere = new THREE.Mesh( sphereGeom, mirrorSphereMaterial );
+	mirrorSphere.position.set(-2000,-650,-1800);
+	mirrorSphereCamera.position = mirrorSphere.position;
+	scene.add(mirrorSphere);
+	scene.add(sphereGeom);
+	mirrorSphere.castShadow=true;
+	
+	// Spherical Mirror placed
+	var sphereGeom1 =  new THREE.SphereGeometry( 200, 32, 16 );
+	scene.add( mirrorSphereCamera );
+	var mirrorSphereMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorSphereCamera.renderTarget } );
+	mirrorSphere = new THREE.Mesh( sphereGeom1, mirrorSphereMaterial );
+	mirrorSphere.position.set(-1250,-1250,-1800);
+	mirrorSphereCamera.position = mirrorSphere.position;
+	scene.add(mirrorSphere);
+	mirrorSphere.castShadow=true;
+	
+	//Spherical Mirror placed
+	var sphereGeom2 =  new THREE.SphereGeometry( 100, 32, 16 );
+	scene.add( mirrorSphereCamera );
+	var mirrorSphereMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorSphereCamera.renderTarget } );
+	mirrorSphere = new THREE.Mesh( sphereGeom2, mirrorSphereMaterial );
+	mirrorSphere.position.set(-1250,-1300,-1450);
+	mirrorSphereCamera.position = mirrorSphere.position;
+	scene.add(mirrorSphere);
+	mirrorSphere.castShadow=true;	
+	
+	//Spherical Mirror placed 
+	var sphereGeom3 =  new THREE.SphereGeometry( 100, 32, 16 );
+	scene.add( mirrorSphereCamera );
+	var mirrorSphereMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorSphereCamera.renderTarget } );
+	mirrorSphere = new THREE.Mesh( sphereGeom3, mirrorSphereMaterial );
+	mirrorSphere.position.set(-1250,-1300,-2150);
+	mirrorSphereCamera.position = mirrorSphere.position;
+	scene.add(mirrorSphere);
+	mirrorSphere.castShadow=true;
+	
+	//Sphrical Mirror placed above the teapot
+	var sphereGeom4 =  new THREE.SphereGeometry( 200, 32, 16 );
+	scene.add( mirrorSphereCamera );
+	var mirrorSphereMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorSphereCamera.renderTarget } );
+	mirrorSphere1 = new THREE.Mesh( sphereGeom1, mirrorSphereMaterial );
+	mirrorSphere.position.set(0,500,0);
+	mirrorSphereCamera.position = mirrorSphere.position;
+	scene.add(mirrorSphere);
+	mirrorSphere.castShadow=true;
+}
+
+function animate() 
+{
+    // For animating the spotlight
+    an += 3;
+    anim[0].position.x = 1000*Math.sin(an*Math.PI/180);
+    anim[0].position.y = 2000+Math.sin(an*10*Math.PI/180)*500;
+    anim[0].position.z = 1000*Math.cos(an*Math.PI/180);
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function update()
+{
+	controls.update();
+}
+
+function render() 
+{
+	mirrorCube.visible = false;
+	mirrorCubeCamera.updateCubeMap( renderer, scene );
+	mirrorCube.visible = true;
+
+	mirrorSphere.visible = false;
+	mirrorSphereCamera.updateCubeMap( renderer, scene );
+	mirrorSphere.visible = true;
+	
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>
